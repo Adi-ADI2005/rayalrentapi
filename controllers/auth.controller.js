@@ -1,5 +1,5 @@
 import User from '../models/User.js';
-import { sendTokens, generateAccessToken } from '../utils/jwt.js';
+import { sendTokens, generateAccessToken, cookieOptions } from '../utils/jwt.js';
 import jwt from 'jsonwebtoken';
 
 export const register = async (req, res) => {
@@ -51,8 +51,9 @@ export const googleAuth = async (req, res) => {
 };
 
 export const logout = async (req, res) => {
-  res.clearCookie('accessToken');
-  res.clearCookie('refreshToken');
+  const opts = { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax' };
+  res.clearCookie('accessToken', opts);
+  res.clearCookie('refreshToken', opts);
   res.json({ success: true, message: 'Logged out' });
 };
 
@@ -73,7 +74,7 @@ export const refreshToken = async (req, res) => {
     const user = await User.findById(decoded.id);
     if (!user) return res.status(401).json({ success: false, message: 'User not found' });
     const accessToken = generateAccessToken(user._id, user.role);
-    res.cookie('accessToken', accessToken, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000 });
+    res.cookie('accessToken', accessToken, cookieOptions(7));
     res.json({ success: true, accessToken });
   } catch (err) {
     res.status(401).json({ success: false, message: 'Invalid refresh token' });
