@@ -4,7 +4,10 @@ import cloudinary from '../config/cloudinary.js';
 export const updateProfile = async (req, res) => {
   try {
     const { name, phone, address } = req.body;
-    const updateData = { name, phone, address };
+    const updateData = {};
+    if (name !== undefined && name !== null) updateData.name = name;
+    if (phone !== undefined && phone !== null) updateData.phone = phone;
+    if (address !== undefined && address !== null) updateData.address = address;
     if (req.file) updateData.avatar = req.file.path;
     const user = await User.findByIdAndUpdate(req.user._id, updateData, { new: true });
     res.json({ success: true, message: 'Profile updated', user });

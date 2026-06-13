@@ -13,6 +13,7 @@ export const cookieOptions = (maxAgeDays) => ({
   secure: isProduction(),
   sameSite: isProduction() ? 'none' : 'lax',
   maxAge: maxAgeDays * 24 * 60 * 60 * 1000,
+  path: '/',
 });
 
 export const sendTokens = (res, user) => {

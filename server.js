@@ -19,25 +19,29 @@ import userRoutes from './routes/user.routes.js';
 import couponRoutes from './routes/coupon.routes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: path.join(__dirname, '.env'), override: true });
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 const app = express();
+const isProduction = process.env.NODE_ENV === 'production';
 
 connectDB();
 
 app.use(helmet({
   crossOriginResourcePolicy: false,
   crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
+  contentSecurityPolicy: false,
 }));
+
 const allowedOrigins = process.env.CLIENT_URL
   ? process.env.CLIENT_URL.split(',').map((o) => o.trim())
   : true;
 
 app.use(cors({
-  origin: allowedOrigins,
+  origin: isProduction ? allowedOrigins : true,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
 }));
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
@@ -69,16 +73,24 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/coupons', couponRoutes);
 
-app.get('/', (req, res) => res.json({ message: 'RoyalRent API Running' }));
+if (isProduction) {
+  const clientBuild = path.join(__dirname, '../client/dist');
+  app.use(express.static(clientBuild));
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(clientBuild, 'index.html'));
+  });
+} else {
+  app.get('/', (req, res) => res.json({ message: 'RoyalRent API Running' }));
+}
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(err.status || 500).json({ success: false, message: err.message || 'Server Error' });
 });
 
-if (!process.env.VERCEL) {
-  const PORT = process.env.PORT || 3001;
-  app.listen(PORT, 'localhost', () => console.log(`RoyalRent server running on port ${PORT}`));
-}
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, isProduction ? '0.0.0.0' : 'localhost', () =>
+  console.log(`RoyalRent server running on port ${PORT} [${process.env.NODE_ENV}]`)
+);
 
 export default app;
